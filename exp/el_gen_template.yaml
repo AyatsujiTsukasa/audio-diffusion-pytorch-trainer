@@ -7,6 +7,7 @@ sampling_rate: 48000
 length: 262144
 channels: 2
 log_every_n_steps: 1000
+model_name: el_gen_template
 
 model:
   _target_: main.module_base.Model
@@ -48,13 +49,14 @@ datamodule:
   dataset:
     _target_: audio_data_pytorch.WAVDataset
     recursive: True
+    path: ${models_dir}/${model_name}/preprocessed_wavs
     sample_rate: ${sampling_rate}
     transforms:
       _target_: audio_data_pytorch.AllTransform
       random_crop_size: ${length}
       stereo: True
-  val_split: 0.0001
-  batch_size: 16
+  val_split: 0.01
+  batch_size: 32
   num_workers: 8
   pin_memory: True
 
@@ -69,7 +71,7 @@ callbacks:
     save_last: True         # additionaly always save model from last epoch
     mode: "min"             # can be "max" or "min"
     verbose: False
-    dirpath: ${logs_dir}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
+    dirpath: ${models_dir}/${model_name}/ckpts/${now:%Y-%m-%d-%H-%M-%S}
     filename: '{epoch:02d}-{valid_loss:.3f}'
 
   model_summary:
@@ -97,11 +99,11 @@ loggers:
     # offline: False  # set True to store all logs only locally
     job_type: "train"
     group: ""
-    save_dir: ${logs_dir}
+    save_dir: ${models_dir}/${model_name}/logs
 
 trainer:
   _target_: pytorch_lightning.Trainer
-  gpus: 0 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
+  gpus: -1 # Set `1` to train on GPU, `0` to train on CPU only, and `-1` to train on all GPUs, default `0`
   precision: 32 # Precision used for tensors, default `32`
   accelerator: null # `ddp` GPUs train individually and sync gradients, default `None`
   min_epochs: 0
